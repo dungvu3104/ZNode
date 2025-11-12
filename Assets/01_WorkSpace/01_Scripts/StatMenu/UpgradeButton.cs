@@ -14,13 +14,15 @@ public class UpgradeButton : MonoBehaviour
     public PlayerStats playerStats;
 
     private Button button;
+    private Image buttonImage;
 
     private void Awake()
     {
         button = GetComponent<Button>();
         button.onClick.AddListener(OnClick);
 
-        // Get UpgradeButton from the GameObject at runtime
+        buttonImage = GetComponent<Image>();
+
         if (unlockRootObject != null)
         {
             unlockRootButton = unlockRootObject.GetComponent<UpgradeButton>();
@@ -46,8 +48,8 @@ public class UpgradeButton : MonoBehaviour
             ApplyUpgradeEffect();
             Debug.Log($"{nodeInstance.data.upgradeName} upgraded to level {nodeInstance.currentLevel}");
 
-            if (unlockRootButton != null)
-                unlockRootButton.UpdateDependentUnlocks();
+            // Update children
+            UpdateDependentUnlocks();
         }
         else
         {
@@ -57,7 +59,6 @@ public class UpgradeButton : MonoBehaviour
 
     private void ApplyUpgradeEffect()
     {
-        // Works for any EnumStat
         playerStats.AddStat(nodeInstance.data.stat, nodeInstance.data.perUpgradeValue);
     }
 
@@ -65,12 +66,26 @@ public class UpgradeButton : MonoBehaviour
     {
         if (nodeInstance.unlockRoot == null)
         {
+            // Root node is always visible
             nodeInstance.unlocked = true;
         }
         else
         {
+            // Child node unlocked if root's level >= required level
             nodeInstance.unlocked = nodeInstance.unlockRoot.currentLevel >= nodeInstance.unlockRequirementLevel;
         }
+
+        // Only hide/show visuals, do NOT deactivate GameObject
+        if (buttonImage != null)
+            buttonImage.enabled = nodeInstance.unlocked;
+
+        // Optional: hide text too if using TextMeshPro
+        var tmp = GetComponentInChildren<TMPro.TMP_Text>();
+        if (tmp != null)
+            tmp.enabled = nodeInstance.unlocked;
+
+        // Update children if unlocked
+        UpdateDependentUnlocks();
     }
 
     public void UpdateDependentUnlocks()
@@ -84,4 +99,29 @@ public class UpgradeButton : MonoBehaviour
             }
         }
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmos()
+    {
+        if (unlockRootObject != null)
+        {
+            Color startColor = nodeInstance.unlockRoot == null ? Color.yellow : Color.cyan; // Root = yellow, child = cyan
+            Color endColor = nodeInstance.unlocked ? Color.green : Color.red;
+            DrawGizmoLine(transform.position, unlockRootObject.transform.position, startColor, endColor);
+        }
+    }
+
+    private void DrawGizmoLine(Vector3 start, Vector3 end, Color startColor, Color endColor, int segments = 10)
+    {
+        Vector3 prev = start;
+        for (int i = 1; i <= segments; i++)
+        {
+            float t = i / (float)segments;
+            Vector3 point = Vector3.Lerp(start, end, t);
+            Gizmos.color = Color.Lerp(startColor, endColor, t);
+            Gizmos.DrawLine(prev, point);
+            prev = point;
+        }
+    }
+#endif
 }

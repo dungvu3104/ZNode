@@ -20,18 +20,24 @@ public class UpgradeButtonGenerator : MonoBehaviour
             return;
         }
 
-        // Clear existing children first (optional)
-        for (int i = parentContainer.childCount - 1; i >= 0; i--)
-        {
-            DestroyImmediate(parentContainer.GetChild(i).gameObject);
-        }
-
         // Create a button for each ScriptableObject
         foreach (var nodeData in allNodeData)
         {
-            GameObject buttonObj = Instantiate(upgradeButtonPrefab, parentContainer);
+            // Check if a button for this node already exists
+            bool exists = false;
+            foreach (Transform child in parentContainer)
+            {
+                UpgradeButton existingBtn = child.GetComponent<UpgradeButton>();
+                if (existingBtn != null && existingBtn.nodeInstance.data == nodeData)
+                {
+                    exists = true;
+                    break;
+                }
+            }
 
-            // Use the ScriptableObject's asset name
+            if (exists) continue; // Skip if already exists
+
+            GameObject buttonObj = Instantiate(upgradeButtonPrefab, parentContainer);
             buttonObj.name = nodeData.name;
 
             UpgradeButton btn = buttonObj.GetComponent<UpgradeButton>();
@@ -51,6 +57,6 @@ public class UpgradeButtonGenerator : MonoBehaviour
             }
         }
 
-        Debug.Log("Generated " + allNodeData.Count + " Upgrade Buttons!");
+        Debug.Log("Generated Upgrade Buttons! Total: " + parentContainer.childCount);
     }
 }
